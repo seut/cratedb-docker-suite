@@ -1,0 +1,47 @@
+services:
+  pyroscope:
+    image: grafana/pyroscope
+    ports:
+      - 4040:4040
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-pyroscope-app
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana-provisioning:/etc/grafana/provisioning
+    ports:
+      - 3000:3000
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+    ports:
+      - 9090:9090
+  cratedb:
+    image: crate:5.10.13
+    ports:
+      - 4200:4200
+      - 5432:5432
+      - 8080:8080
+    volumes:
+      - /tmp/cratedb:/data
+      - ./pyroscope:/pyroscope
+      - ./cratedb:/cratedb
+    command: [ "crate",
+               "-Ccluster.name=cratedb-pyroscope",
+               "-Cnode.name=cratedb-1",
+               "-Cnode.data=true",
+               "-Cnetwork.host=_site_",
+               "-Cdiscovery.type=single-node",
+               "-Cpath.repo=/data/repo"]
+    environment:
+      - CRATE_HEAP_SIZE=6g
+      - CRATE_JAVA_OPTS=
+          -javaagent:/pyroscope/pyroscope-agent.jar
+          -javaagent:/cratedb/crate-jmx-exporter-1.2.1.jar=8080
+      - PYROSCOPE_APPLICATION_NAME=cratedb
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
+      - PYROSCOPE_PROFILER_ALLOC=512k
