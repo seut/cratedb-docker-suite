@@ -20,28 +20,91 @@ services:
       - ./prometheus/:/etc/prometheus/
     ports:
       - 9090:9090
-  cratedb:
-    image: crate:5.10.13
+  cratedb-1:
+    image: crate:${CRATEDB_VERSION}
     ports:
       - 4200:4200
       - 5432:5432
       - 8080:8080
     volumes:
-      - /tmp/cratedb:/data
+      - /tmp/cratedb/1:/data
+      - /tmp/cratedb/repo:/repo
       - ./pyroscope:/pyroscope
       - ./cratedb:/cratedb
     command: [ "crate",
-               "-Ccluster.name=cratedb-pyroscope",
+               "-Ccluster.name=cratedb-docker",
                "-Cnode.name=cratedb-1",
                "-Cnode.data=true",
                "-Cnetwork.host=_site_",
-               "-Cdiscovery.type=single-node",
-               "-Cpath.repo=/data/repo"]
+               #"-Cdiscovery.type=single-node",
+               "-Cdiscovery.seed_hosts=cratedb-2,cratedb-3",
+               "-Ccluster.initial_master_nodes=cratedb-1,cratedb-2,cratedb-3",
+               "-Cgateway.expected_data_nodes=3",
+               "-Cgateway.recover_after_data_nodes=2",
+               "-Cpath.repo=/repo"]
     environment:
-      - CRATE_HEAP_SIZE=6g
+      - CRATE_HEAP_SIZE=2g
       - CRATE_JAVA_OPTS=
           -javaagent:/pyroscope/pyroscope-agent.jar
-          -javaagent:/cratedb/crate-jmx-exporter-1.2.1.jar=8080
-      - PYROSCOPE_APPLICATION_NAME=cratedb
+          -javaagent:/cratedb/crate-jmx-exporter-${CRATEDB_JMX_EXPORTER_VERSION}.jar=8080
+      - PYROSCOPE_APPLICATION_NAME=cratedb-1
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
+      - PYROSCOPE_PROFILER_ALLOC=512k
+  cratedb-2:
+    image: crate:${CRATEDB_VERSION}
+    ports:
+      - 4201:4200
+      - 5433:5432
+      - 8081:8080
+    volumes:
+      - /tmp/cratedb/2:/data
+      - /tmp/cratedb/repo:/repo
+      - ./pyroscope:/pyroscope
+      - ./cratedb:/cratedb
+    command: [ "crate",
+               "-Ccluster.name=cratedb-docker",
+               "-Cnode.name=cratedb-2",
+               "-Cnode.data=true",
+               "-Cnetwork.host=_site_",
+               "-Cdiscovery.seed_hosts=cratedb-1,cratedb-3",
+               "-Ccluster.initial_master_nodes=cratedb-1,cratedb-2,cratedb-3",
+               "-Cgateway.expected_data_nodes=3",
+               "-Cgateway.recover_after_data_nodes=2",
+               "-Cpath.repo=/repo"]
+    environment:
+      - CRATE_HEAP_SIZE=2g
+      - CRATE_JAVA_OPTS=
+          -javaagent:/pyroscope/pyroscope-agent.jar
+          -javaagent:/cratedb/crate-jmx-exporter-${CRATEDB_JMX_EXPORTER_VERSION}.jar=8080
+      - PYROSCOPE_APPLICATION_NAME=cratedb-2
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
+      - PYROSCOPE_PROFILER_ALLOC=512k
+  cratedb-3:
+    image: crate:${CRATEDB_VERSION}
+    ports:
+      - 4202:4200
+      - 5434:5432
+      - 8082:8080
+    volumes:
+      - /tmp/cratedb/3:/data
+      - /tmp/cratedb/repo:/repo
+      - ./pyroscope:/pyroscope
+      - ./cratedb:/cratedb
+    command: [ "crate",
+               "-Ccluster.name=cratedb-docker",
+               "-Cnode.name=cratedb-3",
+               "-Cnode.data=true",
+               "-Cnetwork.host=_site_",
+               "-Cdiscovery.seed_hosts=cratedb-1,cratedb-2",
+               "-Ccluster.initial_master_nodes=cratedb-1,cratedb-2,cratedb-3",
+               "-Cgateway.expected_data_nodes=3",
+               "-Cgateway.recover_after_data_nodes=2",
+               "-Cpath.repo=/repo"]
+    environment:
+      - CRATE_HEAP_SIZE=2g
+      - CRATE_JAVA_OPTS=
+          -javaagent:/pyroscope/pyroscope-agent.jar
+          -javaagent:/cratedb/crate-jmx-exporter-${CRATEDB_JMX_EXPORTER_VERSION}.jar=8080
+      - PYROSCOPE_APPLICATION_NAME=cratedb-3
       - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
       - PYROSCOPE_PROFILER_ALLOC=512k

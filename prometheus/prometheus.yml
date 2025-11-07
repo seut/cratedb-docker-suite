@@ -3,4 +3,4 @@ global:
 scrape_configs:
   - job_name: 'cratedb_jmx'
     static_configs:
-      - targets: ['cratedb:8080']
+      - targets: ['cratedb-1:8080', 'cratedb-2:8080', 'cratedb-3:8080']
